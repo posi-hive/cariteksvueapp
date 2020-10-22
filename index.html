@@ -1,0 +1,177 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Cari Text Di Youtube</title>
+<link rel="stylesheet" href="https://maxcdn.bootstrapcdn.com/bootstrap/4.0.0/css/bootstrap.min.css" integrity="sha384-Gn5384xqQ1aoWXA+058RXPxPg6fy4IWvTNh0E263XmFcJlSAwiGgFAW/dAiS6JXm" crossorigin="anonymous">
+<style>
+.url{
+    width: 300px;
+}
+.url:focus{
+    width: 500px;
+}
+.fade-enter-active, .fade-leave-active {
+    transition: opacity .2s;
+}
+.fade-enter, .fade-leave-to {
+    opacity: 0;
+}
+</style>
+</head>
+<body>
+    <div class="container">
+                <main id="app">
+                    <h3 class="text-red-600 font-bold text-3xl mb-3 uppercase">Cari Text Di Youtube</h3>
+                    <div class="col">
+                            <input type="text" class="form-control url" v-model="url" placeholder="masukan url youtube..">
+                            <input type="text" v-model="keyword" placeholder="masukan keyword.." class="form-control col-md-4 keyword" :autofocus="'autofocus'">
+                    </div>
+                        <button class="btn btn-danger btn-lg text-black" @click="bersihkan()">
+                            <ion-icon name="sync-sharp"></ion-icon>
+                        </button>
+        
+                    <div v-if="errorKeyword" class="text-red-500 mt-1 text-sm">{{ errorKeyword }}</div>
+                    <div class="my-3">
+                
+                        <button @click="onFirstClick" :disabled="!pagination.first"
+                                :class="!pagination.first"
+                        ><ion-icon name="play-back-circle"></ion-icon></button>
+                
+                        <button @click="onPrevClick" :disabled="!pagination.prev"
+                                :class="!pagination.prev"
+                        ><ion-icon name="play-back"></ion-icon></button>
+                
+                        <button @click="onNextClick" :disabled="!pagination.next"
+                                :class="!pagination.next"
+                        ><ion-icon name="play-forward"></ion-icon></button>
+                
+                        <button @click="onLastClick" :disabled="!pagination.last"
+                                :class="!pagination.last"
+                        ><ion-icon name="play-forward-circle"></ion-icon></button>
+                    </div>
+                
+                    <div v-if="pagination.total || pagination.page" class="mb-5 text-gray-600">
+                        <p>
+                            Total Hasil : {{ pagination.total }} 
+                        </p>
+                        Halaman ke : {{ pagination.page }}
+                    </div>
+                    <transition name="fade">
+                        <ol v-if="result.length > 2" v-s class="daftar bg-white p-4 rounded shadow-lg transistion duration-300 opacity-100">
+                        <li class="leading-8" v-for="(hasil, index) in result" :key="index">
+                        <div class="flex items-center">
+                            {{ index + 1 }}. <span v-html="hasil.text"></span>
+                        <a class=" text-black p-1 rounded hover:text-white-700" :href="url + '&t=' + hasil.start + 's'" target="_blank">
+                            <ion-icon name="arrow-forward-circle-sharp"></ion-icon>
+                        </a>
+                        </div>
+                        </li>
+                        </ol>
+                    </transition>
+                </main>
+    </div>
+
+<script src="vue.js"></script>
+<script src="debounce.js"></script>
+<script src="https://unpkg.com/ionicons@5.2.3/dist/ionicons.js"></script>
+<script>
+new Vue({
+    el: '#app',
+    data: {
+    url: '',
+    keyword: '',
+    result: [],
+    errorKeyword: '',
+    pagination: {
+        first: null,
+        prev: null,
+        next: null,
+        last: null,
+        total: 0,
+        page: null
+    }
+    },
+    computed: {
+    paginationString(){
+        return JSON.stringify(this.pagination, null, 2)
+    },
+    resultString(){
+        return JSON.stringify(this.result, null, 2)
+    }
+    },
+    watch: {
+    keyword : pDebounce(function (keyword) {
+        this.errorKeyword = ''
+        this.search(keyword, this.url)
+    }, 300)
+    },
+    methods: {
+    async search(keyword, url, pagination){
+    let link = `https://cari-teks-video-api.vercel.app/api/search?q=${keyword}&url=${encodeURIComponent(url)}`
+    if(keyword){
+        if(keyword.length < 3){
+        this.errorKeyword = 'Keyword terlalu pendek'
+        return null
+    }else {
+        this.errorKeyword = ''
+        
+    }
+    }
+    if(pagination){
+        link = pagination
+    }
+    try{
+        const response = await fetch(link).then(_res => {
+        if(_res.ok){
+            return _res.json()
+        }else {
+            return []
+        }
+        })
+        if(response.total == 0){
+        this.errorKeyword = 'Keyword salah! Coba yang lain'
+        }else{
+        this.errorKeyword = ''
+
+        }
+        this.result = response.data
+        this.pagination.first = response.first
+        this.pagination.prev = response.prev
+        this.pagination.next = response.next
+        this.pagination.last = response.last
+        this.pagination.total = response.total
+        this.pagination.page = response.page
+    }catch(err){
+        console.log('tidak ada')
+    }
+    },
+    bersihkan(){
+        // untuk membersihkan inputkan keyword
+        this.keyword = ''
+        this.result = []
+    },
+    onFirstClick(){
+    // ketika tombol first di klik
+    this.search(this.keyword, this.url, this.pagination.first)
+    },
+    onPrevClick(){
+    // ketika tombol prev di klik
+    this.search(this.keyword, this.url, this.pagination.prev)
+
+    },
+    onNextClick(){
+    // ketika tombol next di klik
+    this.search(this.keyword, this.url, this.pagination.next)
+    },
+    onLastClick(){
+    // ketika tombol last di klik
+    this.search(this.keyword, this.url, this.pagination.last)
+    },
+    
+    }
+});
+</script>
+</body>
+</html>
